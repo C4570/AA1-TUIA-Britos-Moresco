@@ -144,8 +144,6 @@ if st.button("Realizar predicción", type="primary"):
         # Agrega la fila a 'weather_date'
         weather_data.loc[len(weather_data)] = fila_a_agregar
 
-        # Ahora 'weather_date' contiene la fila de 'df'
-
         # Drop unnecessary columns
         weather_data = weather_data.drop(['Unnamed: 0', 'Date', 'Location'], axis=1)
 
