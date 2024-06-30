@@ -19,10 +19,7 @@ st.title('Predicción de lluvia en Australia')
 @st.cache_resource
 def load_models():
     models = {
-        "Random Search": joblib.load('ModelRS.joblib'),
-        "Regresión Logística Inicial": joblib.load('ModelRL.joblib'),
-        "Grid Search": joblib.load('ModelGS.joblib'),
-        "Red Neuronal": joblib.load('ModelNN.joblib'),
+        "Random Search": joblib.load('ModelRS.joblib')
     }
     return models
 
@@ -32,7 +29,7 @@ st.success('Modelos cargados exitosamente!')
 
 # Selección de modelo
 selected_model = st.sidebar.selectbox(
-    "Selecciona el modelo a utilizar",
+    "Modelo utilizado:",
     options=list(models.keys())
 )
 
@@ -107,14 +104,8 @@ with col2:
 
 # Lluvia
 st.header("Lluvia")
-col1, col2, col3 = st.columns(3)
-with col1:
-    RainToday = st.selectbox("¿Llovió hoy?", ['No', 'Yes'])
-with col2:
-    RainTomorrow = st.selectbox("¿Lloverá mañana?", ['No', 'Yes'])
-with col3:
-    RainfallTomorrow = st.number_input("Cantidad de lluvia para mañana", min_value=0.0, max_value=500.0, value=0.0, step=0.1)
-
+RainToday = st.selectbox("¿Llovió hoy?", ['No', 'Yes'])
+    
 # Botón para realizar la predicción
 if st.button("Realizar predicción", type="primary"):
     with st.spinner("Procesando datos y realizando predicción..."):
@@ -129,8 +120,8 @@ if st.button("Realizar predicción", type="primary"):
             'Pressure9am': [Pressure9am], 'Pressure3pm': [Pressure3pm],
             'Cloud9am': [Cloud9am], 'Cloud3pm': [Cloud3pm],
             'Temp9am': [Temp9am], 'Temp3pm': [Temp3pm],
-            'RainToday': [RainToday], 'RainTomorrow': [RainTomorrow],
-            'RainfallTomorrow': [RainfallTomorrow]
+            'RainToday': [RainToday], 'RainTomorrow': ['No'],
+            'RainfallTomorrow': [0.0]
         }
 
         df = pd.DataFrame(data)
@@ -138,6 +129,18 @@ if st.button("Realizar predicción", type="primary"):
         file_path= 'weatherAUS.csv'
         weather_data = pd.read_csv(file_path, sep=',',engine='python')
 
+        # Cargamos el dataset original y fiteamos el transform
+        # Crear el estandarizador
+        scaler = StandardScaler()
+        
+        columns_to_standardize = ['MinTemp', 'MaxTemp', 'Rainfall', 'Evaporation', 'Sunshine',
+                        'WindGustSpeed', 'WindSpeed9am', 'WindSpeed3pm', 'Humidity9am', 'Humidity3pm',
+                        'Pressure9am', 'Pressure3pm', 'Cloud9am', 'Cloud3pm', 'Temp9am',
+                        'Temp3pm', 'RainfallTomorrow']
+        
+        # Aplicar la estandarización a las columnas seleccionadas
+        weather_data[columns_to_standardize] = scaler.fit_transform(weather_data[columns_to_standardize])   
+        
         # Suponiendo que 'df' tiene una fila que deseas agregar
         fila_a_agregar = df.iloc[0]  # Selecciona la primera fila de 'df'
 
@@ -146,25 +149,6 @@ if st.button("Realizar predicción", type="primary"):
 
         # Drop unnecessary columns
         weather_data = weather_data.drop(['Unnamed: 0', 'Date', 'Location'], axis=1)
-
-        columns_to_fill = ['MinTemp', 'MaxTemp', 'Rainfall', 'Evaporation', 'Sunshine',
-                        'WindGustSpeed', 'WindSpeed9am', 'WindSpeed3pm', 'Humidity9am', 'Humidity3pm',
-                        'Pressure9am', 'Pressure3pm', 'Cloud9am', 'Cloud3pm', 'Temp9am',
-                        'Temp3pm', 'RainfallTomorrow']
-
-        weather_data[columns_to_fill] = weather_data[columns_to_fill].fillna(weather_data[columns_to_fill].median())
-
-        # Crear el estandarizador
-        scaler = StandardScaler()
-
-        # Seleccionar las columnas a estandarizar
-        columns_to_standardize = ['MinTemp', 'MaxTemp', 'Rainfall', 'Evaporation', 'Sunshine',
-                                'WindGustSpeed', 'WindSpeed9am', 'WindSpeed3pm', 'Humidity9am', 'Humidity3pm',
-                                'Pressure9am', 'Pressure3pm', 'Cloud9am', 'Cloud3pm', 'Temp9am',
-                                'Temp3pm', 'RainfallTomorrow']
-
-        # Aplicar la estandarización a las columnas seleccionadas
-        weather_data[columns_to_standardize] = scaler.fit_transform(weather_data[columns_to_standardize])
 
         diccionario = {
             'N': ['N', 'NNW', 'NNE', 'NE', 'NW'],
@@ -192,6 +176,9 @@ if st.button("Realizar predicción", type="primary"):
         last_row = weather_data_dummies.tail(1)
         last_row
 
+        # Aplicar la estandarización a las columnas seleccionadas
+        last_row[columns_to_standardize] = scaler.transform(last_row[columns_to_standardize])
+        
         # Drop unnecessary columns
         last_row = last_row.drop(['RainTomorrow_Yes', 'RainfallTomorrow'], axis=1)
 
@@ -231,4 +218,3 @@ if st.button("Realizar predicción", type="primary"):
             st.write("Probabilidad no disponible para este modelo.")
         
     st.info(f"Esta predicción se basa en los datos meteorológicos proporcionados y el modelo {selected_model} entrenado con datos históricos de Australia.")
-
