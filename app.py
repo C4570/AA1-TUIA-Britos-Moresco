@@ -126,6 +126,7 @@ if st.button("Realizar predicción", type="primary"):
 
         df = pd.DataFrame(data)
 
+        # Cargamso el dataset
         file_path= 'weatherAUS.csv'
         weather_data = pd.read_csv(file_path, sep=',',engine='python')
 
@@ -141,13 +142,13 @@ if st.button("Realizar predicción", type="primary"):
         # Aplicar la estandarización a las columnas seleccionadas
         weather_data[columns_to_standardize] = scaler.fit_transform(weather_data[columns_to_standardize])   
         
-        # Suponiendo que 'df' tiene una fila que deseas agregar
-        fila_a_agregar = df.iloc[0]  # Selecciona la primera fila de 'df'
+        # Selecciona la primera fila de 'df'
+        fila_a_agregar = df.iloc[0]  
 
         # Agrega la fila a 'weather_date'
         weather_data.loc[len(weather_data)] = fila_a_agregar
 
-        # Drop unnecessary columns
+        # Elimina las columnas inecesarias
         weather_data = weather_data.drop(['Unnamed: 0', 'Date', 'Location'], axis=1)
 
         diccionario = {
@@ -179,7 +180,7 @@ if st.button("Realizar predicción", type="primary"):
         # Aplicar la estandarización a las columnas seleccionadas
         last_row[columns_to_standardize] = scaler.transform(last_row[columns_to_standardize])
         
-        # Drop unnecessary columns
+        # Elimina las columnas inecesarias
         last_row = last_row.drop(['RainTomorrow_Yes', 'RainfallTomorrow'], axis=1)
 
         modelo = models[selected_model]
