@@ -126,12 +126,37 @@ if st.button("Realizar predicción", type="primary"):
 
         df = pd.DataFrame(data)
 
-        # Cargamso el dataset
+        # Cargamso el dataset original
         file_path= 'weatherAUS.csv'
         weather_data = pd.read_csv(file_path, sep=',',engine='python')
 
-        # Cargamos el dataset original y fiteamos el transform
-        # Crear el estandarizador
+        # Hacemos la reduccion de dimencionalidad
+        ubicaciones_deseadas = ['Adelaide', 'Canberra', 'Cobar', 'Dartmoor', 'Melbourne', 'MelbourneAirport', 'MountGambier', 'Sydney', 'SydneyAirport']
+        weather_data = weather_data[weather_data['Location'].isin(ubicaciones_deseadas)]
+        weather_data = weather_data.drop(['Unnamed: 0', 'Location'], axis=1)
+        
+        # Hacemos el split de los datos segun la fecha y eliminamos la columna 'Date'
+        weather_data["Date"] = pd.to_datetime(weather_data["Date"])
+        fecha_80porciento = weather_data['Date'].quantile(0.8)
+        train = weather_data[weather_data['Date'] <= fecha_80porciento]
+        train = train.drop('Date', axis=1)
+
+        # Completamos datos faltantes
+        train['WindGustDir'].fillna(train['WindGustDir'].mode()[0], inplace=True)
+        train['WindDir9am'].fillna(train['WindDir9am'].mode()[0], inplace=True)
+        train['WindDir3pm'].fillna(train['WindDir3pm'].mode()[0], inplace=True)
+        train['RainToday'].fillna(train['RainToday'].mode()[0], inplace=True)
+        train['RainTomorrow'].fillna(train['RainTomorrow'].mode()[0], inplace=True)
+        
+        columns_to_fill = ['MinTemp', 'MaxTemp', 'Rainfall', 'Evaporation', 'Sunshine',
+                   'WindGustSpeed', 'WindSpeed9am', 'WindSpeed3pm', 'Humidity9am', 'Humidity3pm',
+                   'Pressure9am', 'Pressure3pm', 'Cloud9am', 'Cloud3pm', 'Temp9am',
+                   'Temp3pm', 'RainfallTomorrow']
+
+        train_filled = train.copy()
+        train[columns_to_fill] = train_filled[columns_to_fill].fillna(train_filled[columns_to_fill].median())
+
+        # Creamos el estandarizador, fiteamos el transform de train y luego lo aplicamos al los datos del usuario
         scaler = StandardScaler()
         
         columns_to_standardize = ['MinTemp', 'MaxTemp', 'Rainfall', 'Evaporation', 'Sunshine',
@@ -140,16 +165,13 @@ if st.button("Realizar predicción", type="primary"):
                         'Temp3pm', 'RainfallTomorrow']
         
         # Aplicar la estandarización a las columnas seleccionadas
-        weather_data[columns_to_standardize] = scaler.fit_transform(weather_data[columns_to_standardize])   
+        train[columns_to_standardize] = scaler.fit_transform(train[columns_to_standardize])   
         
         # Selecciona la primera fila de 'df'
         fila_a_agregar = df.iloc[0]  
 
         # Agrega la fila a 'weather_date'
-        weather_data.loc[len(weather_data)] = fila_a_agregar
-
-        # Elimina las columnas inecesarias
-        weather_data = weather_data.drop(['Unnamed: 0', 'Date', 'Location'], axis=1)
+        train.loc[len(train)] = fila_a_agregar
 
         diccionario = {
             'N': ['N', 'NNW', 'NNE', 'NE', 'NW'],
@@ -162,19 +184,19 @@ if st.button("Realizar predicción", type="primary"):
         diccionario_invertido = {valor: clave for clave, lista_valores in diccionario.items() for valor in lista_valores}
 
         # Aplicar la transformación a WindGustDir
-        weather_data['WindGustDir'] = weather_data['WindGustDir'].map(diccionario_invertido)
+        train['WindGustDir'] = train['WindGustDir'].map(diccionario_invertido)
 
         # Aplicar la transformación a WindDir9am
-        weather_data['WindDir9am'] = weather_data['WindDir9am'].map(diccionario_invertido)
+        train['WindDir9am'] = train['WindDir9am'].map(diccionario_invertido)
 
         # Aplicar la transformación a WindDir3pm
-        weather_data['WindDir3pm'] = weather_data['WindDir3pm'].map(diccionario_invertido)
+        train['WindDir3pm'] = train['WindDir3pm'].map(diccionario_invertido)
 
         columns_to_dummy = ['WindGustDir', 'WindDir9am', 'WindDir3pm', 'RainToday', 'RainTomorrow']
-        weather_data_dummies = pd.get_dummies(weather_data, columns=columns_to_dummy, drop_first=True)
-        weather_data_dummies.replace({True: 1, False: 0}, inplace=True)
+        train_dummies = pd.get_dummies(train, columns=columns_to_dummy, drop_first=True)
+        train_dummies.replace({True: 1, False: 0}, inplace=True)
 
-        last_row = weather_data_dummies.tail(1)
+        last_row = train_dummies.tail(1)
         last_row
 
         # Aplicar la estandarización a las columnas seleccionadas
